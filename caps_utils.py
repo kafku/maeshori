@@ -138,11 +138,17 @@ class CocoGenerator(object):
         if not self.on_memory and not feature_extractor is None:
             self.feature_extractor = feature_extractor
 
+        # replace signals
+        if not start_signal is None:
+            start_signal = self.word_dict[start_signal]
+        if not end_signal is None:
+            end_signal = self.word_dict[end_signal]
+
         for caption_info in shuffle(self.caption_table).iterrows():
             # process caption sequence
             X_lang, y_lang = rnn_formatter(caption_info[1]['caption'],
-                                           start_signal=self.word_dict[start_signal],
-                                           end_signal=self.word_dict[end_signal],
+                                           start_signal=start_signal,
+                                           end_signal=end_signal,
                                            **kwargs)
             y_lang = to_categorical(y_lang - 1, num_classes=self.vocab_size)
 
