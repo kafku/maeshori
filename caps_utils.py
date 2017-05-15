@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import os
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
 from skimage import io
@@ -21,6 +22,7 @@ class CocoGenerator(object):
                  coco_data_type,
                  img_dir=None,
                  word_dict=None,
+                 vocab_size=None,
                  word_dict_creator=None,
                  tokenizer=word_tokenize,
                  caps_process=lambda x: x,
@@ -48,7 +50,7 @@ class CocoGenerator(object):
             self.img_dir = "%s/images/%s/"%(coco_data_path, coco_data_type)
 
         # coco instances
-        self.coco = COCO('%s/annotations/instances_%s.json'%(coco_data_path, coco_data_type))
+        coco = COCO('%s/annotations/instances_%s.json'%(coco_data_path, coco_data_type))
 
         # coco captions
         coco_caps = COCO('%s/annotations/captions_%s.json'%(coco_data_path, coco_data_type))
@@ -64,6 +66,11 @@ class CocoGenerator(object):
             del all_text
         else:
             self.word_dict = word_dict
+            self.vocab_size = vocab_size
+
+        # load image path
+        self.img_path = dict(
+            [(key, value["file_name"]) for key, value in coco.imgs.items()])
 
         # load caption table
         self.caption_table = pd.DataFrame([i for i in coco_caps.anns.values()])
@@ -77,7 +84,7 @@ class CocoGenerator(object):
         self.raw_img = raw_img
         if on_memory:
             self.img_dict = dict()
-            for image_id in self.caption_table["image_id"].unique():
+            for image_id in tqdm(self.caption_table["image_id"].unique()):
                 img_data = self._load_image(image_id)
                 if raw_img:
                     self.img_dict[image_id] = img_data
@@ -101,7 +108,7 @@ class CocoGenerator(object):
             preprocessed image (numpy.array)
         """
 
-        img_path = os.path.join(self.img_dir, self.coco.loadImgs(image_id)[0]["file_name"])
+        img_path = os.path.join(self.img_dir, self.img_path[image_id])
         img_data = imresize(io.imread(img_path), self.img_size, interp='bicubic') # channel last
         if len(img_data.shape) == 2 or img_data.shape[2] == 1: # if gray scale
             img_data = gray2rgb(img_data)
