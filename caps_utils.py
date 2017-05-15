@@ -33,7 +33,8 @@ class CocoGenerator(object):
         Args:
             coco_data_path: Path to COCO dataset
             coco_data_type: e.g. train2014, val2014
-            img_dir: Path to the image direcoty. If missing, coco_data_path/coco_data_type
+            img_dir: Path to the image directory.
+                     If missing, coco_data_path/images/coco_data_type
             word_dict: precomputed wor dictionary which takes str as keys and
                        integer (index) as values.
             word_dict_creator: Function that takes text then returns word dictionary
@@ -44,7 +45,7 @@ class CocoGenerator(object):
         """
         # image data dir
         if img_dir is None:
-            self.img_dir = "%s/%s/"%(coco_data_path, coco_data_type)
+            self.img_dir = "%s/images/%s/"%(coco_data_path, coco_data_type)
 
         # coco instances
         self.coco = COCO('%s/annotations/instances_%s.json'%(coco_data_path, coco_data_type))
