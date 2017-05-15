@@ -19,6 +19,8 @@ def create_word_dict(text,
     """
     if signals is None:
         signals = ["<OOV>", "<BOS>", "<EOS>"]
+    if mandatory is None:
+        mandatory = []
     token_count = Counter(tokenizer(text))
     word_dict = defaultdict(lambda: len(word_dict) + idx_start_from)
     most_common_token = signals + mandatory
