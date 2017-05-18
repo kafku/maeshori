@@ -144,17 +144,18 @@ class CocoGenerator(object):
         if not end_signal is None:
             end_signal = self.word_dict[end_signal]
 
-        for caption_info in shuffle(self.caption_table).iterrows():
-            # process caption sequence
-            X_lang, y_lang = rnn_formatter(caption_info[1]['caption'],
-                                           start_signal=start_signal,
-                                           end_signal=end_signal,
-                                           **kwargs)
-            y_lang = to_categorical(y_lang - 1, num_classes=self.vocab_size)
+        while True:
+            for caption_info in shuffle(self.caption_table).iterrows():
+                # process caption sequence
+                X_lang, y_lang = rnn_formatter(caption_info[1]['caption'],
+                                               start_signal=start_signal,
+                                               end_signal=end_signal,
+                                               **kwargs)
+                y_lang = to_categorical(y_lang - 1, num_classes=self.vocab_size)
 
-            # load image feature
-            image_feature = self._get_img_feature(caption_info[1]["image_id"])
-            new_shape = (X_lang.shape[0],) + (1, 1, 1)[0:len(image_feature.shape)]
-            image_feature = np.tile(image_feature, new_shape)
+                # load image feature
+                image_feature = self._get_img_feature(caption_info[1]["image_id"])
+                new_shape = (X_lang.shape[0],) + (1, 1, 1)[0:len(image_feature.shape)]
+                image_feature = np.tile(image_feature, new_shape)
 
-            yield {img_key: image_feature, lang_key: X_lang}, y_lang
+                yield {img_key: image_feature, lang_key: X_lang}, y_lang
