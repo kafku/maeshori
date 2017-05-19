@@ -31,9 +31,3 @@ def create_word_dict(text,
     word_dict.default_factory = lambda: word_dict[signals[0]]
 
     return word_dict, vocab_size
-
-
-def curry(f, **kwargs):
-    def curried_func(x):
-        return f(x, **kwargs)
-    return curried_func
