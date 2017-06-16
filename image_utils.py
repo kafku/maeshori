@@ -3,7 +3,7 @@
 
 import numpy as np
 from keras.utils import np_utils
-from keras.preprocessing.image import load_img
+from keras.preprocessing.image import load_img, img_to_array
 #from sklearn.preprocessing import OneHotEncoder
 
 def image_generator(img_list, image_size, num_classes, batch_size=200,
@@ -20,7 +20,7 @@ def image_generator(img_list, image_size, num_classes, batch_size=200,
 
             x_train = [] # raw image
             for img_path in img_list.loc[img_batch_idx]["path"]:
-                img_data = load_img(img_path, target_size=image_size)
+                img_data = img_to_array(load_img(img_path, target_size=image_size))
                 x_train.append(img_data.astype(dtype))
 
             y_train = img_list.loc[img_batch_idx]["class"].values
