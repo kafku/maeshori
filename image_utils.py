@@ -19,7 +19,7 @@ def image_generator(img_list, image_size, num_classes, batch_size=200, shuffle=T
             img_idx = img_list.index
 
         for i in range(0, len(img_list), batch_size):
-            img_batch_idx = img_idx[i:min(i + batch_size, len(img_list) - 1)]
+            img_batch_idx = img_idx[i:min(i + batch_size, len(img_list))]
 
             x_train = [] # raw image
             for img_path in img_list.loc[img_batch_idx]["path"]:
