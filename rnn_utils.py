@@ -18,6 +18,7 @@ def rnn_formatter(sequence,
         formatted numpy array for RNN
     """
 
+    sequence = list(sequence)
     if not start_signal is None:
         sequence.insert(0, start_signal)
     if not end_signal is None:

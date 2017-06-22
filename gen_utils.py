@@ -27,7 +27,7 @@ def _resize_batch(X, y, factor):
     if isinstance(X, dict):
         X_train = dict()
         for key in X.keys():
-            X[key] = X[key][extended_idx, ]
+            X_train[key] = X[key][extended_idx, ]
     else:
         X_train = X[extended_idx, ]
 
