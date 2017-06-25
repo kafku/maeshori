@@ -2,6 +2,7 @@
 
 import os
 from tqdm import tqdm
+import pickle
 import numpy as np
 import pandas as pd
 from skimage import io
@@ -30,7 +31,8 @@ class CocoGenerator(object):
                  on_memory=False,
                  img_size=None,
                  img_process=lambda x: x,
-                 feature_extractor=None):
+                 feature_extractor=None,
+                 cache=None):
         """
         Args:
             coco_data_path: Path to COCO dataset
@@ -83,13 +85,23 @@ class CocoGenerator(object):
         self.on_memory = on_memory
         self.raw_img = raw_img
         if on_memory:
-            self.img_dict = dict()
-            for image_id in tqdm(self.caption_table["image_id"].unique()):
-                img_data = self._load_image(image_id)
-                if raw_img:
-                    self.img_dict[image_id] = img_data
-                else:
-                    self.img_dict[image_id] = self.feature_extractor(img_data)
+            if cache is not None and os.path.exists(cache):
+                print('Loading %s'%cache)
+                with open(cache, 'rb') as cache_file:
+                    self.img_dict = pickle.load(cache_file)
+            else:
+                self.img_dict = dict()
+                for image_id in tqdm(self.caption_table["image_id"].unique()):
+                    img_data = self._load_image(image_id)
+                    if raw_img:
+                        self.img_dict[image_id] = img_data
+                    else:
+                        self.img_dict[image_id] = self.feature_extractor(img_data)
+                if cache is not None:
+                    print('Saving %s'%cache)
+                    with open(cache, 'wb') as cache_file:
+                        pickle.dump(self.img_dict, cache_file)
+
 
         if on_memory:
             self._get_img_feature = lambda image_id: self.img_dict[image_id]
