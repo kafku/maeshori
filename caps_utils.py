@@ -130,7 +130,10 @@ class CocoGenerator(object):
     def generator(self,
                   img_key="img_input", lang_key="lang_input",
                   start_signal="<BOS>", end_signal="<EOS>",
-                  img_size=None, feature_extractor=None, **kwargs):
+                  img_size=None, feature_extractor=None,
+                  format_split=True,
+                  onehot_y=True,
+                  **kwargs):
         """
         Args:
             img_key: A key values of the image feature
@@ -159,11 +162,33 @@ class CocoGenerator(object):
         while True:
             for caption_info in shuffle(self.caption_table).iterrows():
                 # process caption sequence
-                X_lang, y_lang = rnn_formatter(caption_info[1]['caption'],
-                                               start_signal=start_signal,
-                                               end_signal=end_signal,
-                                               **kwargs)
-                y_lang = to_categorical(y_lang - 1, num_classes=self.vocab_size)
+                if format_split:
+                    X_lang, y_lang = rnn_formatter(caption_info[1]['caption'],
+                                                   start_signal=start_signal,
+                                                   end_signal=end_signal,
+                                                   **kwargs)
+                else:
+                    x_caption = list(caption_info[1]['caption'])
+                    y_caption = list(caption_info[1]['caption'])
+                    if not start_signal is None:
+                        x_caption.insert(0, start_signal)
+                        y_caption.insert(0, start_signal)
+                    if not end_signal is None:
+                        y_caption.append(end_signal)
+
+                    # padding (post)
+                    if 'maxlen' in kwargs:
+                        x_caption += [0] * (kwargs['maxlen'] - len(x_caption))
+                        y_caption += [0] * (kwargs['maxlen'] + 1 - len(y_caption))
+
+                    X_lang = np.atleast_2d(x_caption)
+                    y_lang = np.atleast_2d(y_caption)
+
+                y_lang = np.maximum(y_lang - 1, 0)
+                if onehot_y:
+                    y_lang = to_categorical(y_lang, num_classes=self.vocab_size)
+                elif format_split:
+                    y_lang = np.atleast_2d(y_lang).T
 
                 # load image feature
                 image_feature = self._get_img_feature(caption_info[1]["image_id"])
