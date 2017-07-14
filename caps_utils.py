@@ -184,11 +184,11 @@ class CocoGenerator(object):
                     X_lang = np.atleast_2d(x_caption)
                     y_lang = np.atleast_2d(y_caption)
 
-                y_lang = np.maximum(y_lang - 1, 0)
+                y_lang = np.maximum(y_lang - 1, 0).reshape((1, -1, 1))
                 if onehot_y:
                     y_lang = to_categorical(y_lang, num_classes=self.vocab_size)
                 elif format_split:
-                    y_lang = np.atleast_2d(y_lang).T
+                    y_lang = np.atleast_3d(y_lang).reshape((-1, 1, 1))
 
                 # load image feature
                 image_feature = self._get_img_feature(caption_info[1]["image_id"])
