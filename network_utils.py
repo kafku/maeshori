@@ -7,12 +7,18 @@ from more_itertools import chunked, random_product
 from .gen_utils import stack_batch_list
 
 
-def _random_node_pairs(nodes1, nodes2, n_sample):
+def _random_node_pairs(nodes1, nodes2, graph, n_sample):
     """
     return `n_sample` random node pairs (nodes1 vs node2)
     """
-    return [random_product(nodes1, nodes2) for _ in range(n_sample)]
+    sampled_pairs = []
+    while True:
+        node_pair = random_product(nodes1, nodes2)
+        if not graph.has_edge(*node_pair):
+            sampled_pairs.append(node_pair)
 
+        if len(sampled_pairs) == n_sample:
+            return sampled_pairs
 
 def network_generator(graph, nodes=None, node_features=None, dtype='float32',
                       batch_size=64, n_negative=32,
@@ -67,9 +73,10 @@ def network_generator(graph, nodes=None, node_features=None, dtype='float32',
         while True:
             yield stack_batch_list([
                 _prepare_batch(random.sample(graph.edges, batch_size - n_negative)),
-                _prepare_batch(_random_node_pairs(nodes[0], nodes[1], n_negative))
+                _prepare_batch(_random_node_pairs(nodes[0], nodes[1], graph, n_negative))
             ])
     else:
         # output all pairs
-        for node_pairs in chunked(itertools.product(*nodes), batch_size):
-            yield _prepare_batch(node_pairs)
+        while True:
+            for node_pairs in chunked(itertools.product(*nodes), batch_size):
+                yield _prepare_batch(node_pairs)
