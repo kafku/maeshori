@@ -65,9 +65,37 @@ def stack_batch(generator, stack_size):
 
             if isinstance(y_train, dict):
                 for key in y_train.keys():
-                    y_train[key] = np.concate([y_train[key], y[key]])
+                    y_train[key] = np.concatenate([y_train[key], y[key]])
             else:
                 y_train = np.concatenate([y_train, y])
 
         X_train, y_train = _resize_batch(X_train, y_train, stack_size)
         yield X_train, y_train
+
+
+def stack_batch_list(batch_list):
+    """
+    Args:
+        batch_list: list of batch that containss X, y
+    Returns:
+        X_train, y_train
+    """
+    X_train = None
+    y_train = None
+    X_train, y_train = batch_list[0]
+
+    # stack batches
+    for X, y in batch_list[1:]:
+        if isinstance(X_train, dict):
+            for key in X_train.keys():
+                X_train[key] = np.concatenate([X_train[key], X[key]])
+        else:
+            X_train = np.concatenate([X_train, X])
+
+        if isinstance(y_train, dict):
+            for key in y_train.keys():
+                y_train[key] = np.concatenate([y_train[key], y[key]])
+        else:
+            y_train = np.concatenate([y_train, y])
+
+    return X_train, y_train
