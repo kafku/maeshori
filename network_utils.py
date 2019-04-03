@@ -47,8 +47,8 @@ def network_generator(graph, nodes=None, node_features=None, dtype='float32',
         """
         prepare batch from node pairs
         """
-        node1 = [x[0] for x in node_pairs]
-        node2 = [x[1] for x in node_pairs]
+        node1 = [x[0] if x[0] in nodes[0] else x[1] for x in node_pairs]
+        node2 = [x[1] if x[1] in nodes[1] else x[0] for x in node_pairs]
 
         # view-1 feature
         if node_features is not None and node_features[0] is not None:
