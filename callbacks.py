@@ -82,3 +82,19 @@ class IftttMakerWebHook(WebHook):
 
 class SlackWebHook(WebHook):
     pass
+
+
+class Hyperdash(Callback):
+    """
+    Push notification using Hyperdash
+    """
+    def __init__(self, entries, exp):
+        super(Hyperdash, self).__init__()
+        self.entries = entries
+        self.exp = exp
+
+    def on_eoch_end(self, epoch, logs=None):
+        for entry in self.entries:
+            log = logs.get(entry)
+            if log is not None:
+                self.exp.metric(entry, log)
