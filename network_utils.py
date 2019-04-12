@@ -5,7 +5,7 @@ import random
 import functools
 import numpy as np
 from keras.utils import Sequence
-from more_itertools import random_product
+from more_itertools import chunked, random_product
 from .gen_utils import stack_batch_list
 
 
@@ -15,16 +15,16 @@ def node2index(nodes):
 
 def _random_node_pairs(nodes1, nodes2, graph, n_sample):
     """
-    return `n_sample` random node pairs (nodes1 vs node2)
+    return `n_sample` random negative node pairs (nodes1 vs node2)
     """
     sampled_pairs = []
     while True:
+        if len(sampled_pairs) == n_sample:
+            return sampled_pairs
+
         node_pair = random_product(nodes1, nodes2)
         if not graph.has_edge(*node_pair):
             sampled_pairs.append(node_pair)
-
-        if len(sampled_pairs) == n_sample:
-            return sampled_pairs
 
 
 def _prepare_batch(node_pairs, nodes, node1_idx, node2_idx,
@@ -99,7 +99,7 @@ def network_rand_gen(graph, nodes=None, node_features=None, dtype='float32',
 
 class NodePairSeq(Sequence):
     def __init__(self, graph, nodes=None, node_features=None, dtype='float32',
-                 batch_size=64,
+                 batch_size=64, n_negative=0, iter_all=True,
                  domain1_key="domain1_input",
                  domain2_key="domain2_input"):
         if nodes is None:
@@ -130,25 +130,40 @@ class NodePairSeq(Sequence):
             get_link_weight=get_link_weight,
             domain1_key=domain1_key,
             domain2_key=domain2_key)
+        self.iter_all = iter_all
+
+        # prepare batches in advance
+        if not iter_all:
+            self.node_pairs = []
+            for batch in chunked(graph.edges, batch_size - n_negative):
+                batch.extend(
+                    _random_node_pairs(nodes[0], nodes[1], graph, n_negative))
+                self.node_pairs.append(batch)
 
     def __len__(self):
-        return math.ceil(len(self.nodes[0]) * len(self.nodes[1]) / self.batch_size)
+        if self.iter_all:
+            return math.ceil(len(self.nodes[0]) * len(self.nodes[1]) / self.batch_size)
+
+        return len(self.node_pairs)
 
     def __getitem__(self, idx):
-        data_idx = idx * self.batch_size
-        node1_batch_idx = data_idx // len(self.nodes[1])
-        node2_batch_idx = data_idx % len(self.nodes[1])
+        if self.iter_all:
+            data_idx = idx * self.batch_size
+            node1_batch_idx = data_idx // len(self.nodes[1])
+            node2_batch_idx = data_idx % len(self.nodes[1])
 
-        node_pairs = []
-        for _ in range(self.batch_size):
-            node_pairs.append((self.nodes[0][node1_batch_idx],
-                               self.nodes[1][node2_batch_idx]))
-            node2_batch_idx += 1
-            if node2_batch_idx == len(self.nodes[1]):
-                node2_batch_idx = 0
-                node1_batch_idx += 1
+            node_pairs = []
+            for _ in range(self.batch_size):
+                node_pairs.append((self.nodes[0][node1_batch_idx],
+                                   self.nodes[1][node2_batch_idx]))
+                node2_batch_idx += 1
+                if node2_batch_idx == len(self.nodes[1]):
+                    node2_batch_idx = 0
+                    node1_batch_idx += 1
 
-            if node1_batch_idx == len(self.nodes[0]):
-                break
+                if node1_batch_idx == len(self.nodes[0]):
+                    break
 
-        return self.prepare_batch(node_pairs)
+            return self.prepare_batch(node_pairs)
+
+        return self.prepare_batch(self.node_pairs[idx])
