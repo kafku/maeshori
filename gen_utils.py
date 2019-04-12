@@ -2,6 +2,28 @@
 
 import numpy as np
 import math
+import threading
+
+
+class ThreadsafeIterator(object):
+    def __init__(self, it):
+        self.lock = threading.Lock()
+        self.it = it
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        with self.lock:
+            return next(self.it)
+
+
+def threadsafe_generator(f):
+    def g(*args, **kwargs):
+        return ThreadsafeIterator(f(*args, **kwargs))
+
+    return g
+
 
 def _resize_batch(X, y, factor):
     """
