@@ -1,11 +1,11 @@
 # coding: utf-8
 
+import math
 import random
-import itertools
 import functools
 import numpy as np
 from keras.utils import Sequence
-from more_itertools import chunked, random_product
+from more_itertools import random_product
 from .gen_utils import stack_batch_list
 
 
@@ -121,6 +121,8 @@ class NodePairSeq(Sequence):
         # TODO: enable getting edge-weight
         get_link_weight = lambda n1, n2: 1 if graph.has_edge(n1, n2) else 0
 
+        self.batch_size = batch_size
+        self.nodes = nodes
         self.prepare_batch = functools.partial(
             _prepare_batch,
             nodes=nodes, node1_idx=node1_idx, node2_idx=node2_idx,
@@ -128,10 +130,25 @@ class NodePairSeq(Sequence):
             get_link_weight=get_link_weight,
             domain1_key=domain1_key,
             domain2_key=domain2_key)
-        self.node_pairs = [*chunked(itertools.product(*nodes), batch_size)]
 
     def __len__(self):
-        return len(self.node_pairs)
+        return math.ceil(len(self.nodes[0]) * len(self.nodes[1]) / self.batch_size)
 
     def __getitem__(self, idx):
-        yield self.prepare_batch(self.node_pairs[idx])
+        data_idx = idx * self.batch_size
+        node1_batch_idx = data_idx // len(self.nodes[1])
+        node2_batch_idx = data_idx % len(self.nodes[1])
+
+        node_pairs = []
+        for _ in range(self.batch_size):
+            node_pairs.append((self.nodes[0][node1_batch_idx],
+                               self.nodes[1][node2_batch_idx]))
+            node2_batch_idx += 1
+            if node2_batch_idx == len(self.nodes[1]):
+                node2_batch_idx = 0
+                node1_batch_idx += 1
+
+            if node1_batch_idx == len(self.nodes[0]):
+                break
+
+        return self.prepare_batch(node_pairs)
