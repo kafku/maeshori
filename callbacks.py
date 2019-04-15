@@ -1,6 +1,8 @@
 # couding: utf-8
 
-import os, time, json
+import os
+import time
+import json
 from datetime import datetime
 import urllib
 from keras.callbacks import Callback
@@ -19,7 +21,7 @@ class WebHook(Callback):
             self.job_name = "job_" + os.uname()[1] + "_" + time.strftime("%Y%m%d%H%M")
 
         self.method = "POST"
-        self.headers = {"Content-Type" : "application/json"}
+        self.headers = {"Content-Type": "application/json"}
 
     def on_response(self, response_body):
         pass
@@ -32,6 +34,7 @@ class WebHook(Callback):
             response_body = response.read().decode("utf-8")
             self.on_response(response_body)
 
+
 class IftttMakerWebHook(WebHook):
     """
     Push notification through IFTTT Maker WebHook
@@ -43,8 +46,8 @@ class IftttMakerWebHook(WebHook):
 
     def on_epoch_begin(self, epoch, logs=None):
         message = {
-            "value1" : self.job_name,
-            "value2" : "Epoch %d has begun."%(epoch + 1)
+            "value1": self.job_name,
+            "value2": "Epoch %d has begun." % (epoch + 1)
         }
         self.post_message(message)
 
@@ -52,20 +55,20 @@ class IftttMakerWebHook(WebHook):
         metrics_str = ""
         for k in self.params['metrics']:
             if k in logs:
-                metrics_str += "%s: %0.4f/"%(k,logs[k])
+                metrics_str += "%s: %0.4f/" % (k, logs[k])
 
         message = {
-            "value1" : self.job_name,
-            "value2" : "Epoch %d ended."%(epoch + 1),
-            "value3" : metrics_str
+            "value1": self.job_name,
+            "value2": "Epoch %d ended." % (epoch + 1),
+            "value3": metrics_str
         }
         self.post_message(message)
 
     def on_train_begin(self, logs=None):
         self.start_time = datetime.now()
         message = {
-            "value1" : self.job_name,
-            "value2" : "Training phase has started."
+            "value1": self.job_name,
+            "value2": "Training phase has started."
         }
         self.post_message(message)
 
@@ -73,12 +76,28 @@ class IftttMakerWebHook(WebHook):
         diff_time = datetime.now() - self.start_time
         duration_h = 24.0 * diff_time.days + diff_time.seconds / 3600
         message = {
-            "value1" : self.job_name,
-            "value2" : "Training phase ended.",
-            "value3" : "Duration: %0.3f [h]"%duration_h
+            "value1": self.job_name,
+            "value2": "Training phase ended.",
+            "value3": "Duration: %0.3f [h]" % duration_h
         }
         self.post_message(message)
 
 
 class SlackWebHook(WebHook):
     pass
+
+
+class Hyperdash(Callback):
+    """
+    Push notification using Hyperdash
+    """
+    def __init__(self, entries, exp):
+        super(Hyperdash, self).__init__()
+        self.entries = entries
+        self.exp = exp
+
+    def on_epoch_end(self, epoch, logs=None):
+        for entry in self.entries:
+            log = logs.get(entry)
+            if log is not None:
+                self.exp.metric(entry, log)
