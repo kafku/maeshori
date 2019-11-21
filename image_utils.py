@@ -3,8 +3,10 @@
 
 import numpy as np
 import pandas as pd
+import math
+from multiprocessing import Lock
 from scipy.misc import imread, imresize
-from keras.utils import np_utils
+from keras.utils import np_utils, Sequence
 #from sklearn.preprocessing import OneHotEncoder
 
 
@@ -72,3 +74,48 @@ def image_generator(img_list, image_size, num_classes, batch_size=200, shuffle=T
         if len(corrupted_image) > 0:
             img_list.drop(corrupted_image, inplace=True)
             corrupted_image = []
+
+
+class ImageSequence(Sequence):
+    def __init__(self, img_list, image_size, num_classes, batch_size=64,
+                 dtype="float32", img_process=lambda x: x,
+                 blacklist='./blacklist.txt'):
+        self.img_list = pd.DataFrame(img_list)
+        self.image_size = image_size
+        self.num_classes = num_classes
+        self.batch_size = batch_size
+        self.dtyp = dtype
+        self.img_process = img_process
+        self.lock = Lock()
+        self.bl = _Blacklist(blacklist)
+        self.corrupted_image = []
+
+    def __len__(self):
+        return math.ceil(len(self.img_list) / self.bach_size)
+
+    def __getitem__(self, i):
+        img_idx = self.img_list.index
+        img_batch_idx = img_idx[i:min(i + self.batch_size, len(self.img_list))]
+
+        x_train = []  # raw images
+        for idx in img_batch_idx:
+            try:
+                img_data = imread(self.img_list.loc[idx]['path'], mode='RGB')
+                img_data = imresize(img_data, self.image_size, interp='bicubic')
+                x_train.append(img_data.astype(self.dtype))
+            except Exception:
+                with self.lock:
+                    self.corrupted_image.append(idx)
+                    self.bl.append(self.img_list.loc[idx]['path'])
+
+                continue
+
+        y_train = self.img_list.loc[img_batch_idx]["class"].values
+
+        return (self.img_process(np.stack(x_train).astype(self.dtype)),
+                np_utils.to_categorical(y_train, self.num_classes))
+
+    def on_epoch_end(self):
+        if self.corrupted_image:
+            self.img_list.drop(self.corrupted_image, inplace=True)
+            self.corrupted_image = []
